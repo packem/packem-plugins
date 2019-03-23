@@ -1,4 +1,4 @@
-const { readFileSync } = require("fs-extra");
+const { readFileSync } = require("fs");
 const path = require("path");
 
 const devRuntime = readFileSync(path.join(__dirname, "devRuntime.js"));

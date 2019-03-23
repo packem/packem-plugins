@@ -128,16 +128,23 @@ class PackemDevPlugin extends PackemPlugin {
           break;
       }
     } catch (error) {
+      let errorMsg = error.toString();
+
+      // replace module import/require string to original
+      let dependencies = this.moduleGraph[modId].dependencies;
+      for (const src in dependencies) {
+        errorMsg = errorMsg.replace("_mod_" + dependencies[src], src);
+      }
+
+      // throw dialog error in frontend
       this.sendMessageDialog(
-        '<strong style="color: #dd4949;">&#x2718;</strong> ' +
+        `<strong style="color: #dd4949;">&#x2718;</strong> Error in: ${absoluteModPath}<br /><strong style="color: #dd4949;">&#x2718;</strong> ` +
           ansiToHtml(
-            error
-              .toString()
-              .replace(
-                /\u0020/gm,
-                `<span style="display:inline-block;width:12px;"></span>`
-              )
-          ).replace(/\n/gm, "<br>")
+            errorMsg.replace(
+              /\u0020/gm,
+              `<span style="display:inline-block;width:12px;"></span>`
+            )
+          ).replace(/\n/gm, "<br />")
       );
     }
   }
