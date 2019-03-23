@@ -1,0 +1,20 @@
+{
+  "name": "packem-plugins",
+  "version": "1.0.0",
+  "private": true,
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/packem/packem-plugins.git"
+  },
+  "author": "Bukhaar M <bukharim96@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/packem/packem-plugins/issues"
+  },
+  "homepage": "https://github.com/packem/packem-plugins#readme"
+}
