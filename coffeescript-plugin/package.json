@@ -1,0 +1,23 @@
+{
+  "name": "@packem/coffeescript-plugin",
+  "version": "0.1.0",
+  "description": "Loading CoffeeScript as JavaScript",
+  "main": "./src/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/packem/packem-plugins.git"
+  },
+  "author": "Saddam M <alimohamuda80@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/packem/packem-plugins/issues"
+  },
+  "homepage": "https://github.com/packem/packem-plugins#readme",
+  "dependencies": {
+    "@babel/preset-env": "^7.4.2",
+    "coffeescript": "^2.3.2"
+  }
+}
