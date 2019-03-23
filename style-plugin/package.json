@@ -1,0 +1,23 @@
+{
+  "name": "@packem/style-plugin",
+  "version": "0.1.0",
+  "description": "",
+  "main": "./src/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/packem/packem-plugins.git"
+  },
+  "author": "Saddam M <alimohamuda80@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/packem/packem-plugins/issues"
+  },
+  "homepage": "https://github.com/packem/packem-plugins#readme",
+  "dependencies": {
+    "node-sass": "^4.11.0",
+    "packem": "^0.1.0"
+  }
+}
