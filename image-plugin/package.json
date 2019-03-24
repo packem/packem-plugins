@@ -1,0 +1,24 @@
+{
+  "name": "@packem/image-plugin",
+  "version": "0.1.0",
+  "description": "A Packem plugin exposing high-level image optimizations and minifications",
+  "main": "./src/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/packem/packem-plugins.git"
+  },
+  "author": "Saddam M <alimohamuda80@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/packem/packem-plugins/issues"
+  },
+  "homepage": "https://github.com/packem/packem-plugins#readme",
+  "dependencies": {
+    "imagemin": "^6.1.0",
+    "imagemin-jpegtran": "^6.0.0",
+    "imagemin-pngquant": "^7.0.0"
+  }
+}
