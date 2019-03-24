@@ -19,24 +19,11 @@ module.exports = (initialBundleContent, devServerPort) => `<!DOCTYPE html>
  */
 ;(function() {
   var __packemModules = {};
-  ${initialBundleContent}
-  
-  var __packem = {
-    require: function(modID) {
-      var module = { exports : {} };
-
-      __packemModules[modID](__packem.require, module, module.exports);
-
-      return module.exports.default || module.exports;
-    },
-    reload: function() { __packem.require("_mod_root"); }
-  }
-
-  __packem.reload();
+${initialBundleContent}
   
   var devServerPort = "${devServerPort}";
 
-  ${devRuntime}
+${devRuntime}
 })();
 </script>
 </body>

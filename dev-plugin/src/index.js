@@ -15,6 +15,7 @@ const { readFileSync, writeFileSync } = require("fs");
 const { transformSync } = require("@babel/core");
 const chalk = require("chalk");
 const WebSocket = require("ws");
+const stripAnsi = require("strip-ansi");
 const ansiToHtml = require("ansi-html");
 
 const moduleWatcher = require("./moduleWatcher");
@@ -25,6 +26,12 @@ ansiToHtml.setColors({
 });
 
 class PackemDevPlugin extends PackemPlugin {
+  constructor(pluginConfig) {
+    super(pluginConfig);
+
+    this._moduleGraphCache = {}; // dev session cache
+  }
+
   onInitialBundleComplete(
     config,
     PluginEvents,
@@ -34,6 +41,7 @@ class PackemDevPlugin extends PackemPlugin {
   ) {
     this.CWD = process.cwd();
     this.moduleGraph = moduleGraph;
+    this.dependencyMap = dependencyMap;
 
     const { transformer: transformerConfig } = config;
     const {
@@ -51,9 +59,21 @@ class PackemDevPlugin extends PackemPlugin {
 
     // Initialize devServer & WebSocket connection
     this.devServer = http.createServer((req, res) => {
-      res.writeHead(200, { "Content-Type": "text/html" });
-      res.end(bundleTemp(initialBundleContent, devServerPort));
+      if (req.url !== "/favicon.ico") {
+        // console.log(this._moduleGraphCache);
+        // append cached mods to initialBundleContent
+        if (this._moduleGraphCache)
+          for (const modId in this._moduleGraphCache) {
+            initialBundleContent += `\n__packemModules._mod_${modId} = function(require, module, exports) {${
+              this._moduleGraphCache[modId].content
+            }}`;
+          }
+
+        res.writeHead(200, { "Content-Type": "text/html" });
+        res.end(bundleTemp(initialBundleContent, devServerPort));
+      }
     });
+
     this.webSocket = new WebSocket.Server({ server: this.devServer });
     this.devServer.listen(devServerPort, () => {
       console.info(
@@ -69,7 +89,7 @@ class PackemDevPlugin extends PackemPlugin {
 
     // Initialize module watcher
     if (watchFiles)
-      moduleWatcher(transformerConfig, PluginEvents, dependencyMap);
+      moduleWatcher(transformerConfig, PluginEvents, this.dependencyMap);
   }
 
   onModuleWatch(event, modId, absoluteModPath) {
@@ -83,10 +103,9 @@ class PackemDevPlugin extends PackemPlugin {
           const REBUILD_START_TIME = Date.now();
 
           let subsequentBundle = "";
-          let dependencies = this.moduleGraph[modId].dependencies;
-          let dependencySource = Object.keys(
-            this.moduleGraph[modId].dependencies
-          );
+          const changedMod = this.getModule(modId);
+          let dependencies = changedMod.dependencies;
+          let dependencySource = Object.keys(dependencies);
           let [
             moduleGraph,
             moduleGraphLength,
@@ -104,6 +123,7 @@ class PackemDevPlugin extends PackemPlugin {
           );
 
           for (const modId in moduleGraph) {
+            const cachedMod = this.getModule(modId);
             let mod = moduleGraph[modId];
 
             let { code } = transformSync(
@@ -111,17 +131,33 @@ class PackemDevPlugin extends PackemPlugin {
               this.babelTransformOptions
             );
 
-            subsequentBundle += `__packemModules._mod_${modId} = function(require, module, exports) {${code}};`;
+            subsequentBundle += `\n__packemModules._mod_${modId} = function(require, module, exports) {${code}}`;
+
+            this.cacheModule({
+              id: modId,
+              path: mod.path,
+              dependencies: Object.assign(
+                (cachedMod && cachedMod.dependencies) || {},
+                mod.dependencies
+              ),
+              content: code
+            });
           }
 
           this.sendSubsequentBundle(subsequentBundle);
           console.clear();
-          console.log(chalk.bold.blue(this.CWD) + "$\n");
+          console.info(chalk.bold.blue(this.CWD) + "$\n");
           console.info(
             `  ⚡ ${chalk.yellow("[packem]")} Rebuilt in: ${chalk.yellow(
               ((Date.now() - REBUILD_START_TIME) / 1000).toFixed(2)
             )} s`
           );
+
+          // cache module for subsequent builds
+          // this.moduleGraph[modId].dependencies = Object.assign(
+          //   this.moduleGraph[modId].dependencies,
+          //   moduleGraph[modId].dependencies
+          // );
           break;
 
         default:
@@ -136,6 +172,11 @@ class PackemDevPlugin extends PackemPlugin {
         errorMsg = errorMsg.replace("_mod_" + dependencies[src], src);
       }
 
+      // console.log
+      this.sendConsoleError(
+        stripAnsi(`${errorMsg}\n\nError in: ${absoluteModPath}`)
+      );
+
       // throw dialog error in frontend
       this.sendMessageDialog(
         `<strong style="color: #dd4949;">&#x2718;</strong> Error in: ${absoluteModPath}<br /><strong style="color: #dd4949;">&#x2718;</strong> ` +
@@ -146,12 +187,25 @@ class PackemDevPlugin extends PackemPlugin {
             )
           ).replace(/\n/gm, "<br />")
       );
+
+      console.error(error);
     }
   }
 
-  // Add new module to clientside
-  sendModuleAdd(mod) {
-    this.broadcast({ type: "MODULE_ADDITION", mod });
+  isModuleCached(modId) {
+    return this._moduleGraphCache.hasOwnProperty(modId);
+  }
+
+  cacheModule(mod) {
+    this._moduleGraphCache[mod.id] = mod;
+    this.dependencyMap[mod.path] = mod.id; // for watcher
+  }
+
+  // get from cache else from initial module graph
+  getModule(modId) {
+    return this.isModuleCached(modId)
+      ? this._moduleGraphCache[modId]
+      : this.moduleGraph[modId];
   }
 
   // Delete clientside module
@@ -180,6 +234,12 @@ class PackemDevPlugin extends PackemPlugin {
     if (clientSideLogs) this.broadcast({ type: "CONSOLE_LOG", msg });
   }
 
+  // Clientside logger
+  sendConsoleError(msg) {
+    const { clientSideLogs = true } = this.pluginConfig;
+    if (clientSideLogs) this.broadcast({ type: "CONSOLE_ERROR", msg });
+  }
+
   broadcast(data) {
     for (const client of this.webSocket.clients)
       if (client.readyState === WebSocket.OPEN)
@@ -187,8 +247,8 @@ class PackemDevPlugin extends PackemPlugin {
   }
 
   // @todo better handle error
-  handleWebSocketError(err) {
-    throw Error(err);
+  handleWebSocketError(error) {
+    throw Error(error);
   }
 }
 

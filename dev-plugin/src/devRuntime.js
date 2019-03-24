@@ -1,4 +1,23 @@
 /* Packem development runtime */
+var __packem = {
+  require: function(modID) {
+    var module = { exports : {} };
+
+    try {
+      __packemModules[modID](__packem.require, module, module.exports);
+    } catch(e) {
+      console.error("Error: Unable to load module: " + modID);
+      return;
+    }
+
+    return module.exports.default || module.exports;
+  },
+  reload: function() { __packem.require("_mod_root"); }
+}
+
+__packem.reload();
+
+// HMR Socket
 if (typeof WebSocket !== "undefined") {
   var protocol = location.protocol === "https:" ? "wss" : "ws";
   var devSocket = new WebSocket(protocol + "://localhost:" + devServerPort);
@@ -27,6 +46,9 @@ if (typeof WebSocket !== "undefined") {
         break;
       case "CONSOLE_LOG":
         console.log(data.msg);
+        break;
+      case "CONSOLE_ERROR":
+        console.error(data.msg);
         break;
 
       default:
