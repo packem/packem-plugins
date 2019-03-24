@@ -11,8 +11,8 @@ const imageminPngquant = require("imagemin-pngquant");
 class PackemImagePlugin extends PackemPlugin {
   onModuleBundle(mod) {
     switch (mod.extension) {
-      // case "gif":
       // case "svg":
+      // case "gif":
       case "jpg":
       case "jpeg":
       case "png":
