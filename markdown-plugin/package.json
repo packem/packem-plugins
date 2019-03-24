@@ -1,0 +1,23 @@
+{
+  "name": "@packem/markdown-plugin",
+  "version": "0.1.0",
+  "description": "Loads an escaped HTML string from a Markdown file",
+  "main": "./src/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/packem/packem-plugins.git"
+  },
+  "author": "Saddam M <alimohamuda80@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/packem/packem-plugins/issues"
+  },
+  "homepage": "https://github.com/packem/packem-plugins#readme",
+  "dependencies": {
+    "packem": "^0.1.0",
+    "showdown": "^1.9.0"
+  }
+}
