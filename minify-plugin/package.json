@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/packem/packem-plugins#readme",
   "dependencies": {
+    "@types/node": "^11.11.7",
     "terser": "^3.17.0"
   }
 }

@@ -3,14 +3,11 @@
 const { PackemPlugin } = require("packem");
 
 const { statSync, existsSync } = require("fs");
-const { dirname } = require("path");
+const { dirname, basename } = require("path");
 const walkSync = require("walk-sync");
 const chalk = require("chalk");
 const prettySize = require("prettysize");
-const AsciiTable = require("ascii-table");
-const table = new AsciiTable("Bundle Stats (Packem v0.1.0 alpha)");
-
-// table.removeBorder();
+const asciitable = require("asciitable");
 
 class PackemBundleStatsPlugin extends PackemPlugin {
   onEnd(config): void {
@@ -32,17 +29,91 @@ class PackemBundleStatsPlugin extends PackemPlugin {
       .filter((path: string) => statSync(outputDirectory + "/" + path).isFile())
       .map((path: string) => outputDirectory + "/" + path);
 
-    table.setHeading("", "Asset", "Size");
-    table.setAlign(1, AsciiTable.RIGHT);
+    const options: object = {
+      skinny: true,
+      intersectionCharacter: "+",
+      columns: [
+        { field: "id", name: "ID" },
+        { field: "path", name: "Asset Path" },
+        { field: "size", name: "Size" }
+      ]
+    };
+    const data: object[] = [];
+
     walkedBundles.map((bundle: string) => {
-      table.addRow(
-        "#",
-        chalk.yellow(bundle),
-        chalk.cyan(prettySize(statSync(bundle).size))
+      data.push({
+        id: " # ",
+        path: bundle,
+        size: statSync(bundle).size
+      });
+
+      console.log(
+        statSync(bundle).size,
+        this.pluginConfig.maxAssetSizeLimit.js * 10e6
       );
     });
 
-    console.log(table.toString());
+    // Hack: color ASCII table without breaking
+    let table = asciitable(options, data);
+    let tableSplit = table.split(/\n/);
+    let logAfter: string[] = [];
+
+    table = tableSplit
+      .map(m => "  " + m) // left padding: 2 spaces
+      .map((m, i) => {
+        if ([0, 1, 2, tableSplit.length - 1].includes(i)) return m;
+
+        let pathMatch: string = m.match(/\|\s+\#\s+\|(.+?)\|/)[1].trim();
+        let sizeMatch: string = m.match(/\|\s*(\d+)/)[1].trim();
+        let extendedExtension: string = basename(pathMatch)
+          .split(".")
+          .slice(1)
+          .join(".")
+          .trim();
+        let didAssetBloat: boolean = false;
+
+        if (this.pluginConfig["maxAssetSizeLimit"])
+          if (this.pluginConfig["maxAssetSizeLimit"][extendedExtension])
+            if (
+              +sizeMatch >
+              +this.pluginConfig["maxAssetSizeLimit"][extendedExtension] * 10e6
+            ) {
+              didAssetBloat = true;
+              logAfter.push(pathMatch);
+            }
+
+        m = m.replace(
+          pathMatch,
+          didAssetBloat ? chalk.red(pathMatch) : chalk.yellow(pathMatch)
+        );
+        m = m.replace(
+          sizeMatch,
+          didAssetBloat
+            ? chalk.red(prettySize(sizeMatch))
+            : chalk.green(prettySize(sizeMatch))
+        );
+
+        return m;
+      })
+      .join("\n");
+
+    const space = " ".repeat((tableSplit[0].length - 20) / 2 + 2);
+    console.log(
+      `  ${tableSplit[0]}\n${space +
+        chalk.cyan("Packem Bundle Stats")}\n${table}`
+    );
+    logAfter.forEach(bloatedAssetPath =>
+      console.log(
+        chalk.red(
+          `\nAsset \`${bloatedAssetPath}\` exceeded the size constraint defined.`
+        )
+      )
+    );
+    console.log(
+      chalk.red(
+        `\nTry removing extra dependencies and bloatware code or lowering the size limit.`
+      )
+    );
   }
 }
 
