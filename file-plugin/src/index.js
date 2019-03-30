@@ -75,7 +75,7 @@ class PackemFilePlugin extends PackemPlugin {
       case "txt":
         mod.content = readFileSync(mod.filename).toString();
         return `\n\n// Source: "${mod.filename}"
-this._mod_${mod.id} = function(require, module, exports) {
+__packemModules._mod_${mod.id} = function(require, module, exports) {
   module.exports = "${escapeNewLineES5(mod.content)}";
 }`;
         break;
@@ -87,46 +87,46 @@ this._mod_${mod.id} = function(require, module, exports) {
        */
       case "csv":
         return `\n\n// Source: "${mod.filename}"
-this._mod_${mod.id} = function(require, module, exports) {
-  module.exports = JSON.parse("${JSON.stringify(parseCSV(mod.filename))}");
+__packemModules._mod_${mod.id} = function(require, module, exports) {
+  module.exports = JSON.parse('${JSON.stringify(parseCSV(mod.filename))}');
 }`;
         break;
 
       // JSON file format.
       case "json":
         return `\n\n// Source: "${mod.filename}"
-this._mod_${mod.id} = function(require, module, exports) {
-  module.exports = JSON.parse("${JSON.stringify(require(mod.filename))}");
+__packemModules._mod_${mod.id} = function(require, module, exports) {
+  module.exports = JSON.parse('${JSON.stringify(require(mod.filename))}');
 }`;
         break;
 
       // INI file format.
       case "ini":
         return `\n\n// Source: "${mod.filename}"
-this._mod_${mod.id} = function(require, module, exports) {
-  module.exports = JSON.parse("${JSON.stringify(
+__packemModules._mod_${mod.id} = function(require, module, exports) {
+  module.exports = JSON.parse('${JSON.stringify(
     parseINI(readFileSync(mod.filename).toString())
-  )}");
+  )}');
 }`;
         break;
 
       // YAML file format.
       case "yaml":
         return `\n\n// Source: "${mod.filename}"
-this._mod_${mod.id} = function(require, module, exports) {
-  module.exports = JSON.parse("${JSON.stringify(
+__packemModules._mod_${mod.id} = function(require, module, exports) {
+  module.exports = JSON.parse('${JSON.stringify(
     parseYAML(readFileSync(mod.filename).toString())
-  )}");
+  )}');
 }`;
         break;
 
       // TOML file format.
       case "toml":
         return `\n\n// Source: "${mod.filename}"
-this._mod_${mod.id} = function(require, module, exports) {
-  module.exports = JSON.parse("${JSON.stringify(
+__packemModules._mod_${mod.id} = function(require, module, exports) {
+  module.exports = JSON.parse('${JSON.stringify(
     parseTOML(readFileSync(mod.filename).toString())
-  )}");
+  )}');
 }`;
         break;
       
@@ -135,7 +135,7 @@ this._mod_${mod.id} = function(require, module, exports) {
       case "rss":
       case "atom":
         return `\n\n// Source: "${mod.filename}"
-this._mod_${mod.id} = function(require, module, exports) {
+__packemModules._mod_${mod.id} = function(require, module, exports) {
   module.exports = JSON.parse('${JSON.stringify(
     parseXML(readFileSync(mod.filename).toString())
   )}');
@@ -157,7 +157,7 @@ this._mod_${mod.id} = function(require, module, exports) {
       case "webp":
       case "bmp":
         return `\n\n// Source: "${mod.filename}"
-this._mod_${mod.id} = function(require, module, exports) {
+__packemModules._mod_${mod.id} = function(require, module, exports) {
   module.exports = "${convertImageToBase64(mod.filename)}";
 }`;
         break;

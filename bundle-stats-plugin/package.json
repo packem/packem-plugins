@@ -1,0 +1,26 @@
+{
+  "name": "@packem/bundle-stats-plugin",
+  "version": "0.1.0",
+  "description": "Loads an escaped HTML string from a Markdown file",
+  "main": "./src/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/packem/packem-plugins.git"
+  },
+  "author": "Saddam M <alimohamuda80@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/packem/packem-plugins/issues"
+  },
+  "homepage": "https://github.com/packem/packem-plugins#readme",
+  "dependencies": {
+    "@types/node": "^11.11.7",
+    "chalk": "^2.4.2",
+    "chalk-table": "^1.0.2",
+    "prettysize": "^2.0.0",
+    "walk-sync": "^1.1.3"
+  }
+}
