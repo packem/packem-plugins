@@ -18,8 +18,8 @@
   "homepage": "https://github.com/packem/packem-plugins#readme",
   "dependencies": {
     "@types/node": "^11.11.7",
-    "asciitable": "^0.0.7",
     "chalk": "^2.4.2",
+    "chalk-table": "^1.0.2",
     "prettysize": "^2.0.0",
     "walk-sync": "^1.1.3"
   }
