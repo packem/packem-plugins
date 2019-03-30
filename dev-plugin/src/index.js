@@ -29,15 +29,17 @@ class PackemDevPlugin extends PackemPlugin {
   constructor(pluginConfig) {
     super(pluginConfig);
 
-    this._moduleGraphCache = {}; // dev session cache
+    // dev session cache holder
+    this._moduleGraphCache = Object.create(null);
   }
 
-  onInitialBundleComplete(
+  // initial bundle complete
+  onBundleComplete(
     config,
     PluginEvents,
     moduleGraph,
     dependencyMap,
-    initialBundleContent
+    initialBundles
   ) {
     this.CWD = process.cwd();
     this.moduleGraph = moduleGraph;
@@ -57,24 +59,31 @@ class PackemDevPlugin extends PackemPlugin {
       plugins: transformerConfig.babelPlugins || []
     };
 
+    // handle initialBundleContent, both root/main & dynamic
+    this.initialBundleContent = "";
+
+    for (const id in initialBundles) {
+      this.initialBundleContent += initialBundles[id];
+    }
+
     // Initialize devServer & WebSocket connection
     this.devServer = http.createServer((req, res) => {
       if (req.url !== "/favicon.ico") {
-        // console.log(this._moduleGraphCache);
         // append cached mods to initialBundleContent
         if (this._moduleGraphCache)
           for (const modId in this._moduleGraphCache) {
-            initialBundleContent += `\n__packemModules._mod_${modId} = function(require, module, exports) {${
+            this.initialBundleContent += `\n__packemModules._mod_${modId} = function(require, __packemImport, module, exports) {\n${
               this._moduleGraphCache[modId].content
-            }}`;
+            }\n}`;
           }
 
         res.writeHead(200, { "Content-Type": "text/html" });
-        res.end(bundleTemp(initialBundleContent, devServerPort));
+        res.end(bundleTemp(this.initialBundleContent, devServerPort));
       }
     });
 
-    this.webSocket = new WebSocket.Server({ server: this.devServer });
+    // WebSocket connection
+    this.socket = new WebSocket.Server({ server: this.devServer });
     this.devServer.listen(devServerPort, () => {
       console.info(
         `  ${chalk.green("✔")} DevServer listening at: ${chalk.yellow(
@@ -82,14 +91,19 @@ class PackemDevPlugin extends PackemPlugin {
         )}`
       );
     });
-    this.webSocket.on("connection", ws => {
+    this.socket.on("connection", ws => {
       ws.onerror = this.handleWebSocketError;
     });
-    this.webSocket.on("error", this.handleWebSocketError);
+    this.socket.on("error", this.handleWebSocketError);
 
-    // Initialize module watcher
-    if (watchFiles)
+    if (watchFiles) {
+      // module/file watcher
+      // add root module to dependencyMap so
+      // that it could be watched too
+      this.dependencyMap[config.rootPath] = "root";
+      // Initialize module watcher
       moduleWatcher(transformerConfig, PluginEvents, this.dependencyMap);
+    }
   }
 
   onModuleWatch(event, modId, absoluteModPath) {
@@ -131,13 +145,14 @@ class PackemDevPlugin extends PackemPlugin {
               this.babelTransformOptions
             );
 
-            subsequentBundle += `\n__packemModules._mod_${modId} = function(require, module, exports) {${code}}`;
+            subsequentBundle += `\n__packemModules._mod_${modId} = function(require, __packemImport, module, exports) {\n${code}\n}`;
 
+            // cache module for subsequent builds
             this.cacheModule({
               id: modId,
               path: mod.path,
               dependencies: Object.assign(
-                (cachedMod && cachedMod.dependencies) || {},
+                (cachedMod && cachedMod.dependencies) || Object.create(null),
                 mod.dependencies
               ),
               content: code
@@ -145,19 +160,13 @@ class PackemDevPlugin extends PackemPlugin {
           }
 
           this.sendSubsequentBundle(subsequentBundle);
-          console.clear();
+          // console.clear();
           console.info(chalk.bold.blue(this.CWD) + "$\n");
           console.info(
             `  ⚡ ${chalk.yellow("[packem]")} Rebuilt in: ${chalk.yellow(
               ((Date.now() - REBUILD_START_TIME) / 1000).toFixed(2)
             )} s`
           );
-
-          // cache module for subsequent builds
-          // this.moduleGraph[modId].dependencies = Object.assign(
-          //   this.moduleGraph[modId].dependencies,
-          //   moduleGraph[modId].dependencies
-          // );
           break;
 
         default:
@@ -192,10 +201,6 @@ class PackemDevPlugin extends PackemPlugin {
     }
   }
 
-  isModuleCached(modId) {
-    return this._moduleGraphCache.hasOwnProperty(modId);
-  }
-
   cacheModule(mod) {
     this._moduleGraphCache[mod.id] = mod;
     this.dependencyMap[mod.path] = mod.id; // for watcher
@@ -203,9 +208,7 @@ class PackemDevPlugin extends PackemPlugin {
 
   // get from cache else from initial module graph
   getModule(modId) {
-    return this.isModuleCached(modId)
-      ? this._moduleGraphCache[modId]
-      : this.moduleGraph[modId];
+    return this._moduleGraphCache[modId] || this.moduleGraph[modId];
   }
 
   // Delete clientside module
@@ -241,7 +244,7 @@ class PackemDevPlugin extends PackemPlugin {
   }
 
   broadcast(data) {
-    for (const client of this.webSocket.clients)
+    for (const client of this.socket.clients)
       if (client.readyState === WebSocket.OPEN)
         client.send(JSON.stringify(data));
   }

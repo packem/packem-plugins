@@ -1,19 +1,29 @@
 /* Packem development runtime */
 var __packem = {
+  import: function(url) {
+    return __packem.fetch(url);
+  },
   require: function(modID) {
-    var module = { exports : {} };
+    var module = { exports: {} };
 
     try {
-      __packemModules[modID](__packem.require, module, module.exports);
-    } catch(e) {
-      console.error("Error: Unable to load module: " + modID);
+      __packemModules[modID](
+        __packem.require,
+        __packem.import,
+        module,
+        module.exports
+      );
+    } catch (e) {
+      console.error("Error: Unable to load module: " + modID + "\n" + e);
       return;
     }
 
     return module.exports.default || module.exports;
   },
-  reload: function() { __packem.require("_mod_root"); }
-}
+  reload: function() {
+    __packem.require("_mod_root");
+  }
+};
 
 __packem.reload();
 
