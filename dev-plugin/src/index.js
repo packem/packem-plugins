@@ -133,10 +133,11 @@ class PackemDevPlugin extends PackemPlugin {
             dependencies,
             dependencySource
           );
-          writeFileSync(
-            "../moduleGraph.dev.json",
-            JSON.stringify(moduleGraph, null, 2)
-          );
+          
+          // writeFileSync(
+          //   "../moduleGraph.dev.json",
+          //   JSON.stringify(moduleGraph, null, 2)
+          // );
 
           for (const modId in moduleGraph) {
             const cachedMod = this.getModule(modId);
