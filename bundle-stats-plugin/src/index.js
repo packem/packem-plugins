@@ -21,9 +21,10 @@ class PackemBundleStatsPlugin extends PackemPlugin {
             leftPad: 2,
             intersectionCharacter: "+",
             columns: [
-                { field: "id", name: "ID" },
+                { field: "id", name: " # " },
                 { field: "bundlePath", name: "Asset Path" },
-                { field: "bundleSize", name: "Size" }
+                { field: "bundleSize", name: "Size" },
+                { field: "limit", name: "Limit" }
             ]
         };
         const data = [];
@@ -36,25 +37,34 @@ class PackemBundleStatsPlugin extends PackemPlugin {
                 .join(".")
                 .trim();
             let didAssetBloat = false;
+            let bundleSizeLimit = +this.pluginConfig["maxAssetSizeLimit"][extendedExtension] * 1e3;
             if (this.pluginConfig["maxAssetSizeLimit"])
                 if (this.pluginConfig["maxAssetSizeLimit"][extendedExtension])
-                    if (bundleSize >
-                        +this.pluginConfig["maxAssetSizeLimit"][extendedExtension] * 10e6) {
+                    if (bundleSize > bundleSizeLimit) {
                         didAssetBloat = true;
-                        bloatedBundles.push(true);
+                        bloatedBundles.push(bundleSize); // Don't push `true`. Idk why.
                     }
             let formattedId = didAssetBloat ? chalk.red(" # ") : chalk.yellow(" # ");
-            let formattedBundlePath = didAssetBloat ? chalk.red(bundlePath) : chalk.yellow(bundlePath);
-            let formattedBundleSize = didAssetBloat ? chalk.red(prettySize(bundleSize)) : chalk.green(prettySize(bundleSize));
+            let formattedBundlePath = didAssetBloat
+                ? chalk.red(bundlePath)
+                : chalk.yellow(bundlePath);
+            let formattedBundleSize = didAssetBloat
+                ? chalk.red(prettySize(bundleSize))
+                : chalk.green(prettySize(bundleSize));
+            let formattedLimit = didAssetBloat
+                ? chalk.red(bundleSizeLimit ? prettySize(bundleSizeLimit) : '-')
+                : chalk.cyan(bundleSizeLimit ? prettySize(bundleSizeLimit) : '-');
             data.push({
                 id: formattedId,
                 bundlePath: formattedBundlePath,
-                bundleSize: formattedBundleSize
+                bundleSize: formattedBundleSize,
+                limit: formattedLimit
             });
         });
         let table = chalktable(options, data);
-        console.log(table + "\n");
-        console.log(chalk.red(`${chalk.bold(bloatedBundles.length)} assets exceeded the size constraint defined.\nTry removing extra dependencies and bloatware code or lowering the size limit.`));
+        console.log("\n" + table + "\n");
+        bloatedBundles.length &&
+            console.log(chalk.red(`${chalk.bold(bloatedBundles.length)} asset(s) exceeded the size constraint defined.\nTry removing extra dependencies and bloatware code or lowering the size limit.`));
     }
 }
 module.exports = PackemBundleStatsPlugin;

@@ -1,10 +1,6 @@
 /**
- * Copyright (c) 2019 Packem
- * 
- * Packem File Plugin
- *
- * Handles generic text-based file types. If you want to extract the asset contents
- * into a seperate directory, use the `packem-extract-assets-plugin`.
+ * Copyright (c) 2019 Packem packem-file-plugin
+ * Handles generic text-based file types.
  */
 
 const { PackemPlugin } = require("packem");
@@ -15,14 +11,13 @@ const parseINI = require("ini").parse;
 const parseYAML = require("js-yaml").safeLoad;
 const parseTOML = require("toml").parse;
 const parseXML = require("xml-parser");
-const convertImageToBase64 = require('base64-img').base64Sync;
+const __dangerousConvertImageToBase64 = require("base64-img").base64Sync;
 
-function escapeNewLineES5(string) {
+function escapeTextBasedImport(string) {
   return string.replace(/\n/g, "\\n").replace(/[\""]/g, '\\"');
 }
 
 class PackemFilePlugin extends PackemPlugin {
-  // Defining operations on the final output bundle
   onModuleBundle(mod) {
     switch (mod.extension) {
       /**
@@ -73,11 +68,7 @@ class PackemFilePlugin extends PackemPlugin {
       // Human-readable text files
       case "asc":
       case "txt":
-        mod.content = readFileSync(mod.filename).toString();
-        return `\n\n// Source: "${mod.filename}"
-__packemModules._mod_${mod.id} = function(require, module, exports) {
-  module.exports = "${escapeNewLineES5(mod.content)}";
-}`;
+        return 'module.exports = "' + escapeTextBasedImport(readFileSync(mod.path).toString()) + '";';
         break;
 
       /**
@@ -86,67 +77,65 @@ __packemModules._mod_${mod.id} = function(require, module, exports) {
        * @RFC 4180 is available online at http://tools.ietf.org/html/rfc4180
        */
       case "csv":
-        return `\n\n// Source: "${mod.filename}"
-__packemModules._mod_${mod.id} = function(require, module, exports) {
-  module.exports = JSON.parse('${JSON.stringify(parseCSV(mod.filename))}');
-}`;
+        return (
+          "module.exports = JSON.parse('" +
+          JSON.stringify(parseCSV(readFileSync(mod.path).toString())) +
+          "');"
+        );
         break;
 
       // JSON file format.
       case "json":
-        return `\n\n// Source: "${mod.filename}"
-__packemModules._mod_${mod.id} = function(require, module, exports) {
-  module.exports = JSON.parse('${JSON.stringify(require(mod.filename))}');
-}`;
+      return (
+        "module.exports = JSON.parse('" +
+        JSON.stringify(mod.path) +
+        "');"
+      );
         break;
 
       // INI file format.
       case "ini":
-        return `\n\n// Source: "${mod.filename}"
-__packemModules._mod_${mod.id} = function(require, module, exports) {
-  module.exports = JSON.parse('${JSON.stringify(
-    parseINI(readFileSync(mod.filename).toString())
-  )}');
-}`;
+        return (
+          "module.exports = JSON.parse('" +
+          JSON.stringify(parseINI(readFileSync(mod.path).toString())) +
+          "');"
+        );
         break;
 
       // YAML file format.
       case "yaml":
-        return `\n\n// Source: "${mod.filename}"
-__packemModules._mod_${mod.id} = function(require, module, exports) {
-  module.exports = JSON.parse('${JSON.stringify(
-    parseYAML(readFileSync(mod.filename).toString())
-  )}');
-}`;
+        return (
+          "module.exports = JSON.parse('" +
+          JSON.stringify(parseYAML(readFileSync(mod.path).toString())) +
+          "');"
+        );
         break;
 
       // TOML file format.
       case "toml":
-        return `\n\n// Source: "${mod.filename}"
-__packemModules._mod_${mod.id} = function(require, module, exports) {
-  module.exports = JSON.parse('${JSON.stringify(
-    parseTOML(readFileSync(mod.filename).toString())
-  )}');
-}`;
+        return (
+          "module.exports = JSON.parse('" +
+          JSON.stringify(parseTOML(readFileSync(mod.path).toString())) +
+          "');"
+        );
         break;
-      
+
       // XML file format and other syndication formats.
       case "xml":
       case "rss":
       case "atom":
-        return `\n\n// Source: "${mod.filename}"
-__packemModules._mod_${mod.id} = function(require, module, exports) {
-  module.exports = JSON.parse('${JSON.stringify(
-    parseXML(readFileSync(mod.filename).toString())
-  )}');
-}`;
+        return (
+          "module.exports = JSON.parse('" +
+          JSON.stringify(parseXML(readFileSync(mod.path).toString())) +
+          "');"
+        );
         break;
-      
+
       /**
        * Base64-compatible raw images are converted into a lossless base64
        * format. Use the `packem-image-plugin` for handling advanced image
        * optimizations.
-       * 
+       *
        * @note SVG is returned as a string into the bundle output.
        * @warning IE8 has a limit of 32 KB for the Data URI Scheme. Versions below have no support.
        */
@@ -156,10 +145,7 @@ __packemModules._mod_${mod.id} = function(require, module, exports) {
       case "gif":
       case "webp":
       case "bmp":
-        return `\n\n// Source: "${mod.filename}"
-__packemModules._mod_${mod.id} = function(require, module, exports) {
-  module.exports = "${convertImageToBase64(mod.filename)}";
-}`;
+        return "module.exports = \"" + __dangerousConvertImageToBase64(mod.path) + "\";";
         break;
     }
   }

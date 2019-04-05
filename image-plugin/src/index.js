@@ -23,13 +23,20 @@ class PackemImagePlugin extends PackemPlugin {
       case "gif":
       case "svg":
       case "webp":
+        if (!this.pluginConfig.extractAssetsDirectory) {
+          throw Error(
+            "The field `extractAssetsDirectory` must be defined for the image-plugin."
+          );
+          return;
+        }
+
         const imagesOutputPath = this.pluginConfig.extractAssetsDirectory
-          ? this.config.outputPath +
+          ? this.config.outputDir +
             pathSeparator +
             this.pluginConfig.extractAssetsDirectory
-          : this.config.outputPath + pathSeparator + "img";
+          : this.config.outputDir + pathSeparator + "img";
 
-        imagemin([mod.filename], imagesOutputPath, {
+        imagemin([mod.path], imagesOutputPath, {
           // ImageMin plugins shouldn't be mangled with all file types otherwise it would cause undesired
           // results/outputs since every plugin instance would run on a single file type. For instance,
           // `ImageMinWebPPlugin` is able to process PNG files in this case. It would also result in unnecessary
@@ -39,7 +46,7 @@ class PackemImagePlugin extends PackemPlugin {
           plugins: [
             mod.extension === "jpeg" ||
               (mod.extension === "jpg" &&
-                imageminJpegtran(this.pluginConfig.imageminOptions.jpeg || {})),
+                imageminJpegtran(this.pluginConfig.imageminOptions.jpg || {})),
             mod.extension === "png" &&
               imageminPngquant(this.pluginConfig.imageminOptions.png || {}),
             mod.extension === "gif" &&
@@ -49,13 +56,12 @@ class PackemImagePlugin extends PackemPlugin {
             mod.extension === "webp" &&
               imageminWebp(this.pluginConfig.imageminOptions.webp || {})
             // The result must be filtered out to get the plugin instance of our choice.
-          ].filter(manifestPlugin => !!manifestPlugin)
+          ].filter(Boolean) // Hack for `manifestPlugin => !!manifestPlugin`
         });
 
-        return `\n\n// Source: "${mod.filename}"
-this._mod_${mod.id} = function(require, module, exports) {
-  module.exports = "${this.pluginConfig.extractAssetsDirectory}";
-}`;
+        return (
+          'module.exports = "' + this.pluginConfig.extractAssetsDirectory + '";'
+        );
     }
   }
 }

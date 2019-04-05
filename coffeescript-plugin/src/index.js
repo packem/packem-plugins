@@ -26,14 +26,11 @@ class PackemCoffeeScriptPlugin extends PackemPlugin {
     switch (mod.extension) {
       case "coffee":
         let output = compileCoffeeScript(
-          readFileSync(mod.filename).toString(),
+          readFileSync(mod.path).toString(),
           this.pluginConfig
         );
 
-        return `\n\n// Source: "${mod.filename}"
-__packemModules._mod_${mod.id} = function(require, module, exports) {
-  ${output}
-}`;
+        return output;
         break;
     }
   }
