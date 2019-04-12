@@ -44,8 +44,9 @@ class PackemDevPlugin extends PackemPlugin {
     this.CWD = process.cwd();
     this.moduleGraph = moduleGraph;
     this.dependencyMap = dependencyMap;
+    this.config = config;
 
-    const { transformer: transformerConfig } = config;
+    const { transformer: transformerConfig } = this.config;
     const {
       devServerPort = 3000, // @todo default to unused port
       watchFiles = false,
@@ -100,7 +101,7 @@ class PackemDevPlugin extends PackemPlugin {
       // module/file watcher
       // add root module to dependencyMap so
       // that it could be watched too
-      this.dependencyMap[config.rootPath] = "root";
+      this.dependencyMap[this.config.rootPath] = "root";
       // Initialize module watcher
       moduleWatcher(transformerConfig, PluginEvents, this.dependencyMap);
     }
@@ -126,15 +127,17 @@ class PackemDevPlugin extends PackemPlugin {
             dependencyMap
           ] = regenerateModuleGraph(
             this.CWD,
+            outputPathFileStem, // @todo do this internally
             modId,
             absoluteModPath,
             dependencies,
             dependencySource
           );
-          writeFileSync(
-            "../moduleGraph.dev.json",
-            JSON.stringify(moduleGraph, null, 2)
-          );
+          
+          // writeFileSync(
+          //   "../moduleGraph.dev.json",
+          //   JSON.stringify(moduleGraph, null, 2)
+          // );
 
           for (const modId in moduleGraph) {
             const cachedMod = this.getModule(modId);
