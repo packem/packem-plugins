@@ -4,8 +4,9 @@ const http = require("http");
 const mime = require("mime-types");
 
 const getPortSync = require("./getPortSync");
+const bundleTemp = require("./bundleTemp");
 
-module.exports = (configObject, eventsObject = {}) => {
+module.exports = (configObject, eventsObject = {}, initialBundleContent) => {
   // Union is used even though result is definite
   const port = getPortSync({ port: configObject.port });
   // @ts-ignore noImplicitAny
@@ -13,10 +14,13 @@ module.exports = (configObject, eventsObject = {}) => {
     .createServer((request, response) => {
       let resourcePath = "." + request.url;
 
-      // No force override. Default path leads to `index.html`.
-      if (resourcePath == "./") resourcePath = "./index.html";
-
       typeof eventsObject.onRequest == "function" && eventsObject.onRequest();
+
+      // No force override. Serve the bundle template.
+      if (resourcePath == "./") {
+        response.writeHead(200, { "Content-Type": "text/html" });
+        response.end(bundleTemp(initialBundleContent, port), "utf-8");
+      }
 
       let filePath = path.resolve(
         configObject.publicPath || "./dist",
@@ -28,11 +32,11 @@ module.exports = (configObject, eventsObject = {}) => {
         // [onResourceNotFound] Provide filePath
         return /**<ServerObject>{} */;
 
-      // If is a directory use an `index.html` file.
+      // If is a directory
+      //    1. Use an `index.html` file, or
+      //    2. List a filesystem directory tree
       if (fs.statSync(filePath).isDirectory())
         filePath = path.join(filePath, path.sep, "index.html");
-
-      // console.log(resourcePath, filePath);
 
       // Content type should be decided last.
       const fileExtension = path.extname(filePath);
@@ -54,8 +58,8 @@ module.exports = (configObject, eventsObject = {}) => {
       });
     })
     .listen(port);
-  
-  const devserverUrl = `http://localhost:${port}`
+
+  const devserverUrl = `http://localhost:${port}`;
 
   typeof eventsObject.onWake == "function" && eventsObject.onWake(devserverUrl);
 

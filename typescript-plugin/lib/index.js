@@ -61,7 +61,7 @@ class PackemTypeScriptPlugin extends PackemPlugin {
         const isTsxModule = mod.extension === "tsx";
         if (mod.extension === "ts" || isTsxModule) {
             const tsConfig = validateTsConfig(getTsConfig(this.pluginConfig));
-            const transpileResult = ts.transpileModule(readFileSync(mod.filename).toString(), tsConfig, undefined, this.pluginConfig.diagnostics || true, undefined);
+            const transpileResult = ts.transpileModule(readFileSync(mod.path).toString(), tsConfig, undefined, this.pluginConfig.diagnostics || true, undefined);
             console.log(tsConfig, transpileResult.outputText);
             return `module.exports = function() {
   ${transpileResult.outputText}

@@ -18,9 +18,9 @@ const WebSocket = require("ws");
 const stripAnsi = require("strip-ansi");
 const ansiToHtml = require("ansi-html");
 
-const moduleWatcher = require("./moduleWatcher");
-const writeBundleToOutput = require("./bundleTemp");
-const localServe = require("./localServe");
+const moduleWatcher = require("./utils/moduleWatcher");
+const writeBundleToOutput = require("./utils/bundleTemp");
+const localServe = require("./utils/localServe");
 
 ansiToHtml.setColors({
   reset: ["fff", "00000000"]
@@ -80,29 +80,27 @@ class PackemDevPlugin extends PackemPlugin {
     // });
 
     const _packemDevPlugin = this; // back-compat
-    const { port, httpServerInstance } = localServe(this.pluginConfig, {
-      onRequest() {
-        if (_packemDevPlugin._moduleGraphCache)
-          for (const modId in _packemDevPlugin._moduleGraphCache) {
-            _packemDevPlugin.initialBundleContent += `\n__packemModules._mod_${modId} = function(require, __packemImport, module, exports) {\n${
-              _packemDevPlugin._moduleGraphCache[modId].content
-            }\n}`;
-          }
+    const { port, httpServerInstance } = localServe(
+      this.pluginConfig,
+      {
+        onRequest() {
+          if (_packemDevPlugin._moduleGraphCache)
+            for (const modId in _packemDevPlugin._moduleGraphCache) {
+              _packemDevPlugin.initialBundleContent += `\n__packemModules._mod_${modId} = function(require, __packemImport, module, exports) {\n${
+                _packemDevPlugin._moduleGraphCache[modId].content
+              }\n}`;
+            }
+        },
+
+        onWake(devServerUrl) {
+          console.info(
+            `  ${chalk.green("✔")} DevServer listening at: ${chalk.yellow(
+              devServerUrl
+            )}`
+          );
+        }
       },
-
-      onWake(devServerUrl) {
-        console.info(
-          `  ${chalk.green("✔")} DevServer listening at: ${chalk.yellow(
-            devServerUrl
-          )}`
-        );
-      }
-    });
-
-    writeBundleToOutput(
-      path.resolve(config.outputPath),
-      this.initialBundleContent,
-      port
+      this.initialBundleContent
     );
 
     this.devServer = httpServerInstance;

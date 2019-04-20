@@ -103,7 +103,7 @@ class PackemTypeScriptPlugin extends PackemPlugin {
 
       // @todo Handle diagnostics
       const transpileResult = ts.transpileModule(
-        readFileSync(mod.filename).toString(),
+        readFileSync(mod.path).toString(),
         tsConfig,
         undefined, // fileName?
         this.pluginConfig.diagnostics || true,

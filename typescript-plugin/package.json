@@ -2,7 +2,7 @@
   "name": "@packem/typescript-plugin",
   "version": "0.1.0",
   "description": "First-class TypeScript support in Packem using TypeScript's compiler, tsc.",
-  "main": "./src/index.js",
+  "main": "./lib/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
