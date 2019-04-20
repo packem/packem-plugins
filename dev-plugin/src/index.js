@@ -9,8 +9,8 @@ const {
   NativeUtils: { regenerateModuleGraph }
 } = require("packem");
 
-const http = require("http");
 const { readFileSync, writeFileSync } = require("fs");
+const path = require("path");
 
 const { transformSync } = require("@babel/core");
 const chalk = require("chalk");
@@ -19,7 +19,8 @@ const stripAnsi = require("strip-ansi");
 const ansiToHtml = require("ansi-html");
 
 const moduleWatcher = require("./moduleWatcher");
-const bundleTemp = require("./bundleTemp");
+const writeBundleToOutput = require("./bundleTemp");
+const localServe = require("./localServe");
 
 ansiToHtml.setColors({
   reset: ["fff", "00000000"]
@@ -47,12 +48,7 @@ class PackemDevPlugin extends PackemPlugin {
     this.config = config;
 
     const { transformer: transformerConfig } = this.config;
-    const {
-      devServerPort = 3000, // @todo default to unused port
-      watchFiles = false,
-      clientSideLogs = true
-    } = this.pluginConfig;
-    const devServerUrl = `http://localhost:${devServerPort}/`;
+    const { watchFiles = false, clientSideLogs = true } = this.pluginConfig;
 
     // to be used in onModuleWatch
     this.babelTransformOptions = {
@@ -68,30 +64,51 @@ class PackemDevPlugin extends PackemPlugin {
     }
 
     // Initialize devServer & WebSocket connection
-    this.devServer = http.createServer((req, res) => {
-      if (req.url !== "/favicon.ico") {
-        // append cached mods to initialBundleContent
-        if (this._moduleGraphCache)
-          for (const modId in this._moduleGraphCache) {
-            this.initialBundleContent += `\n__packemModules._mod_${modId} = function(require, __packemImport, module, exports) {\n${
-              this._moduleGraphCache[modId].content
+    // this.devServer = http.createServer((req, res) => {
+    //   if (req.url !== "/favicon.ico") {
+    //     // append cached mods to initialBundleContent
+    //     if (this._moduleGraphCache)
+    //       for (const modId in this._moduleGraphCache) {
+    //         this.initialBundleContent += `\n__packemModules._mod_${modId} = function(require, __packemImport, module, exports) {\n${
+    //           this._moduleGraphCache[modId].content
+    //         }\n}`;
+    //       }
+
+    //     res.writeHead(200, { "Content-Type": "text/html" });
+    //     res.end(writeBundleToOutput(this.initialBundleContent, devServerPort));
+    //   }
+    // });
+
+    const _packemDevPlugin = this; // back-compat
+    const { port, httpServerInstance } = localServe(this.pluginConfig, {
+      onRequest() {
+        if (_packemDevPlugin._moduleGraphCache)
+          for (const modId in _packemDevPlugin._moduleGraphCache) {
+            _packemDevPlugin.initialBundleContent += `\n__packemModules._mod_${modId} = function(require, __packemImport, module, exports) {\n${
+              _packemDevPlugin._moduleGraphCache[modId].content
             }\n}`;
           }
+      },
 
-        res.writeHead(200, { "Content-Type": "text/html" });
-        res.end(bundleTemp(this.initialBundleContent, devServerPort));
+      onWake(devServerUrl) {
+        console.info(
+          `  ${chalk.green("✔")} DevServer listening at: ${chalk.yellow(
+            devServerUrl
+          )}`
+        );
       }
     });
 
+    writeBundleToOutput(
+      path.resolve(config.outputPath),
+      this.initialBundleContent,
+      port
+    );
+
+    this.devServer = httpServerInstance;
+
     // WebSocket connection
     this.socket = new WebSocket.Server({ server: this.devServer });
-    this.devServer.listen(devServerPort, () => {
-      console.info(
-        `  ${chalk.green("✔")} DevServer listening at: ${chalk.yellow(
-          devServerUrl
-        )}`
-      );
-    });
     this.socket.on("connection", ws => {
       ws.onerror = this.handleWebSocketError;
     });
@@ -127,13 +144,13 @@ class PackemDevPlugin extends PackemPlugin {
             dependencyMap
           ] = regenerateModuleGraph(
             this.CWD,
-            outputPathFileStem, // @todo do this internally
+            this.config.outputPathFileStem, // @todo do this internally
             modId,
             absoluteModPath,
             dependencies,
             dependencySource
           );
-          
+
           // writeFileSync(
           //   "../moduleGraph.dev.json",
           //   JSON.stringify(moduleGraph, null, 2)
